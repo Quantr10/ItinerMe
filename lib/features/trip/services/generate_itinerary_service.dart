@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_place/google_place.dart';
-import 'package:itinerme/features/trip/models/destination.dart';
-import 'package:itinerme/features/trip/models/itinerary_day.dart';
+import 'package:itinerme/core/models/destination.dart';
+import 'package:itinerme/core/models/itinerary_day.dart';
 import 'package:itinerme/features/trip/services/place_image_cache_service.dart';
-import '../models/trip.dart';
+import '../../../core/models/trip.dart';
 
 class ItineraryGeneratorService {
   static final GooglePlace googlePlace = GooglePlace(

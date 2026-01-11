@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:itinerme/core/utils/snackbar_helper.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'core/routes/app_routes.dart';
-import 'features/user/data/providers/user_provider.dart';
-import 'features/auth/auth_wrapper.dart';
+import 'features/user/providers/user_provider.dart';
+import 'features/auth/screens/auth_wrapper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -24,6 +25,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'ItinerMe',
         debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: SnackBarHelper.messengerKey,
         home: const AuthWrapper(),
         onGenerateRoute: AppRoutes.generateRoute,
       ),

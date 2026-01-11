@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../features/trip/screens/my_collection_screen.dart';
-import '../../features/trip/screens/create_trip_screen.dart';
-import '../../features/auth/screens/account_screen.dart';
+import '../../features/my_collection/screens/my_collection_screen.dart';
+import '../../features/create_trip/screen/create_trip_screen.dart';
+import '../../features/account/screen/account_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
-import '../../features/auth/auth_wrapper.dart';
+import '../../features/auth/screens/auth_wrapper.dart';
 
 class AppRoutes {
   static const String dashboard = '/';

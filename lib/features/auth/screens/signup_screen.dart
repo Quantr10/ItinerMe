@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../../core/routes/app_routes.dart';
-import '../../user/data/services/user_service.dart';
-import '../../user/models/user.dart';
-import '../../user/data/providers/user_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/snackbar_helper.dart';
+
+import '../../user/providers/user_provider.dart';
+import '../controller/auth_controller.dart';
+import '../state/auth_state.dart';
+import '../widgets/auth_header.dart';
+import '../widgets/auth_email_field.dart';
+import '../widgets/auth_password_field.dart';
+import '../widgets/auth_google_button.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -17,271 +22,161 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _usernameController = TextEditingController();
-  bool _isLoading = false;
-  bool _obscurePassword = true;
+
+  final AuthController _controller = AuthController();
+  AuthState _state = const AuthState();
 
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+
+    setState(() => _state = _state.copyWith(isLoading: true));
+
     try {
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+      await _controller.signUpEmail(
+        email: _emailController.text,
+        password: _passwordController.text,
+        username: _usernameController.text,
+      );
 
-      final user = credential.user;
-      if (user != null) {
-        final userModel = UserModel(
-          id: user.uid,
-          name: _usernameController.text.trim(),
-          email: user.email ?? '',
-          avatarUrl: '',
-          createdTripIds: [],
-          savedTripIds: [],
-        );
+      await context.read<UserProvider>().fetchUser();
+      if (!mounted) return;
 
-        await UserService().createOrUpdateUser(userModel);
-        if (!mounted) return;
-        await context.read<UserProvider>().fetchUser();
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showError('Sign up failed: ${e.message}');
-      }
+      Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+    } catch (e) {
+      SnackBarHelper.error('Sign up failed');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _state = _state.copyWith(isLoading: false));
+      }
     }
   }
 
   Future<void> _signUpWithGoogle() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() => _state = _state.copyWith(isLoading: true));
 
     try {
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) throw Exception('Cancelled by user');
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(
-        credential,
-      );
-      final user = userCredential.user;
-      if (user == null) throw Exception('No user returned');
-
-      final displayName =
-          user.displayName ??
-          user.email?.split('@').first ??
-          'User${user.uid.substring(0, 6)}';
-
-      final userModel = UserModel(
-        id: user.uid,
-        name: displayName,
-        email: user.email ?? '',
-        avatarUrl: user.photoURL ?? '',
-        createdTripIds: [],
-        savedTripIds: [],
-      );
-
-      await UserService().createOrUpdateUser(userModel);
-      if (!mounted) return;
+      await _controller.loginWithGoogle();
       await context.read<UserProvider>().fetchUser();
+      if (!mounted) return;
 
       Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
     } catch (e) {
-      if (mounted) {
-        _showError('Google sign up failed: $e');
-      }
+      SnackBarHelper.error('Google sign up failed');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _state = _state.copyWith(isLoading: false));
+      }
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.errorColor,
-        duration: AppTheme.messageDuration,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_state.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.primaryColor,
       body: SafeArea(
-        child:
-            _isLoading
-                ? const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        child: SingleChildScrollView(
+          padding: AppTheme.largeHorizontalPadding,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                const AuthHeader(),
+
+                // Username
+                SizedBox(
+                  height: AppTheme.fieldHeight,
+                  child: TextFormField(
+                    controller: _usernameController,
+                    decoration: AppTheme.inputDecoration(
+                      'Username',
+                      onClear: () => _usernameController.clear(),
+                    ),
+                    style: const TextStyle(
+                      fontSize: AppTheme.defaultFontSize,
+                      color: Colors.black,
+                    ),
+                    validator:
+                        (v) =>
+                            v == null || v.trim().isEmpty
+                                ? 'Username required'
+                                : null,
                   ),
-                )
-                : SingleChildScrollView(
-                  padding: AppTheme.largeHorizontalPadding,
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
+                ),
+
+                AppTheme.smallSpacing,
+
+                // Email
+                AuthEmailField(controller: _emailController),
+
+                AppTheme.smallSpacing,
+
+                // Password
+                AuthPasswordField(
+                  controller: _passwordController,
+                  obscure: _state.obscurePassword,
+                  onToggle:
+                      () => setState(
+                        () =>
+                            _state = _state.copyWith(
+                              obscurePassword: !_state.obscurePassword,
+                            ),
+                      ),
+                ),
+
+                AppTheme.mediumSpacing,
+
+                // Sign up button
+                AppTheme.elevatedButton(
+                  label: 'SIGN UP',
+                  onPressed: _signUp,
+                  isPrimary: true,
+                ),
+
+                // Google sign up
+                AuthGoogleButton(onPressed: _signUpWithGoogle),
+
+                AppTheme.largeSpacing,
+
+                TextButton(
+                  onPressed:
+                      () => Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.login,
+                      ),
+                  child: RichText(
+                    text: const TextSpan(
+                      text: 'Already have an account? ',
+                      style: TextStyle(color: Colors.white),
                       children: [
-                        AppTheme.extraLargeSpacing,
-                        const Icon(
-                          Icons.travel_explore,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                        AppTheme.mediumSpacing,
-                        Text(
-                          'ItinerMe',
-                          style: const TextStyle(
-                            color: Colors.white,
+                        TextSpan(
+                          text: 'Login',
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: AppTheme.titleFontSize,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-
-                        // Username
-                        SizedBox(
-                          height: AppTheme.fieldHeight,
-                          child: TextFormField(
-                            controller: _usernameController,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: AppTheme.defaultFontSize,
-                            ),
-                            decoration: AppTheme.inputDecoration(
-                              'Username',
-                              onClear: () => _usernameController.clear(),
-                            ),
-                          ),
-                        ),
-                        AppTheme.smallSpacing,
-
-                        // Email
-                        SizedBox(
-                          height: AppTheme.fieldHeight,
-                          child: TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: AppTheme.defaultFontSize,
-                            ),
-                            decoration: AppTheme.inputDecoration(
-                              'Email',
-                              onClear: () => _emailController.clear(),
-                            ),
-                          ),
-                        ),
-                        AppTheme.smallSpacing,
-
-                        // Password
-                        SizedBox(
-                          height: AppTheme.fieldHeight,
-                          child: TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: AppTheme.defaultFontSize,
-                            ),
-                            decoration: AppTheme.inputDecoration(
-                              'Password',
-                              onClear: () => _passwordController.clear(),
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: AppTheme.primaryColor,
-                                  size: AppTheme.largeIconFont,
-                                ),
-                                onPressed:
-                                    () => setState(
-                                      () =>
-                                          _obscurePassword = !_obscurePassword,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        AppTheme.mediumSpacing,
-
-                        // Sign Up Button
-                        AppTheme.elevatedButton(
-                          label: 'SIGN UP',
-                          onPressed: _signUp,
-                          isPrimary: true,
-                        ),
-                        AppTheme.mediumSpacing,
-                        Row(
-                          children: [
-                            const Expanded(child: Divider(color: Colors.white)),
-                            Padding(
-                              padding: AppTheme.horizontalPadding,
-
-                              child: Text(
-                                'OR',
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            const Expanded(child: Divider(color: Colors.white)),
-                          ],
-                        ),
-                        AppTheme.mediumSpacing,
-
-                        // Google Sign-In Button
-                        AppTheme.elevatedButton(
-                          label: 'SIGN UP WITH GOOGLE',
-                          onPressed: _signUpWithGoogle,
-                          isPrimary: false,
-                        ),
-                        AppTheme.largeSpacing,
-                        TextButton(
-                          onPressed:
-                              _isLoading
-                                  ? null
-                                  : () => Navigator.pushReplacementNamed(
-                                    context,
-                                    AppRoutes.login,
-                                  ),
-                          child: RichText(
-                            text: const TextSpan(
-                              text: 'Already have an account? ',
-                              style: TextStyle(
-                                fontSize: AppTheme.defaultFontSize,
-                                color: Colors.white,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: 'Login',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: AppTheme.defaultFontSize,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            color: Colors.white,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
