@@ -1,20 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_place/google_place.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/trip.dart';
 import '../../../core/models/destination.dart';
 import '../../../core/models/itinerary_day.dart';
-import '../../trip/services/place_image_cache_service.dart';
+import '../../../core/services/place_image_cache_service.dart';
 import '../state/trip_detail_state.dart';
 
 class TripDetailController extends ChangeNotifier {
@@ -191,12 +191,22 @@ class TripDetailController extends ChangeNotifier {
   Future<bool> generateSingleDay(int dayIndex) async {
     try {
       final prompt = '''
-You are a travel planner.
-Bring 3–5 destinations in ${trip.location}.
-Return JSON list only:
+You are a professional travel planner. Your task is to generate a precise list of tourist attractions in ${trip.location} for one day.
+
+Each day should have 3-5 destinations and **fully utilized** with realistic visit durations.
+Prioritize must-visit places but **reorder them for optimal routing**.
+Use **precise place names**, avoiding nicknames or abbreviations.
+Make each day's destinations **geographically logical**. Cluster nearby locations together and do not split adjacent spots into different days.
+
+Return a valid JSON array only, no explanation or markdown:
 [
- {"name":"Place","description":"...","durationMinutes":90}
+  {
+    "name": "Place Name",
+    "description": "Detail description",
+    "durationMinutes": 90,
+  }
 ]
+
 ''';
 
       final res = await http.post(
@@ -422,6 +432,77 @@ Return JSON list only:
       });
 
       trip.coverImageUrl = firebaseUrl;
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<LatLon?> getTripCoordinates() async {
+    final geocode = await googlePlace.search.getTextSearch(trip.location);
+    if (geocode?.results?.isNotEmpty ?? false) {
+      final loc = geocode!.results!.first.geometry!.location!;
+      return LatLon(loc.lat!, loc.lng!);
+    }
+    return null;
+  }
+
+  Future<List<AutocompletePrediction>> searchDestinationInTrip(
+    String query,
+  ) async {
+    final coords = await getTripCoordinates();
+    if (coords == null) return [];
+
+    final res = await googlePlace.autocomplete.get(
+      query,
+      location: coords,
+      radius: 100000,
+      strictbounds: true,
+    );
+    return res?.predictions ?? [];
+  }
+
+  Future<List<String>> getTripPhotoReferences() async {
+    final search = await googlePlace.search.getTextSearch(trip.location);
+    if (search?.results?.isEmpty ?? true) return [];
+
+    final placeId = search!.results!.first.placeId!;
+    final detail = await googlePlace.details.get(placeId);
+    final photos = detail?.result?.photos;
+
+    if (photos == null || photos.isEmpty) return [];
+
+    return photos.map((p) => p.photoReference!).toList();
+  }
+
+  Future<bool> changeDateRange(DateTime start, DateTime end) async {
+    try {
+      final oldDays = trip.itinerary;
+      final oldLength = oldDays.length;
+      final newLength = end.difference(start).inDays + 1;
+
+      final newItinerary = List.generate(newLength, (i) {
+        final date = start.add(Duration(days: i));
+        if (i < oldLength) {
+          return ItineraryDay(
+            date: date,
+            destinations: oldDays[i].destinations,
+          );
+        }
+        return ItineraryDay(date: date, destinations: []);
+      });
+
+      trip.startDate = start;
+      trip.endDate = end;
+      trip.itinerary = newItinerary;
+
+      await FirebaseFirestore.instance.collection('trips').doc(trip.id).update({
+        'startDate': Timestamp.fromDate(start),
+        'endDate': Timestamp.fromDate(end),
+        'itinerary': newItinerary.map((e) => e.toJson()).toList(),
+      });
+
       notifyListeners();
       return true;
     } catch (_) {

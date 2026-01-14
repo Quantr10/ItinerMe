@@ -17,11 +17,10 @@ class UserProvider with ChangeNotifier {
 
     final userModel = await _userService.getUserById(firebaseUser.uid);
 
-    // Nếu Firestore chưa kịp tạo → đợi 300ms rồi thử lại
     if (userModel == null) {
       await Future.delayed(const Duration(milliseconds: 300));
       final retry = await _userService.getUserById(firebaseUser.uid);
-      if (retry == null) return; // bỏ im lặng, không throw
+      if (retry == null) return;
       _user = retry;
     } else {
       _user = userModel;

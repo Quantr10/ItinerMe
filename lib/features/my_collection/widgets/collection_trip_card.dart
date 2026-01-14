@@ -131,6 +131,7 @@ class TripCard extends StatelessWidget {
                               top: 0,
                               right: 0,
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (onCopy != null)
                                     _buildAction(
@@ -138,6 +139,7 @@ class TripCard extends StatelessWidget {
                                       onCopy,
                                       tooltip: 'Duplicate trip',
                                     ),
+                                  const SizedBox(width: 4),
                                   if (onRemove != null)
                                     _buildAction(
                                       Icons.favorite,

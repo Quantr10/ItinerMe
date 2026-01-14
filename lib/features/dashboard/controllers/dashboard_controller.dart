@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itinerme/core/models/trip.dart';
 
 import '../state/dashboard_state.dart';
-import '../dashboard_enums.dart';
+import '../enums/dashboard_enums.dart';
 
 class DashboardController {
   final FirebaseFirestore firestore;
@@ -11,7 +11,6 @@ class DashboardController {
 
   DashboardController({required this.firestore, required this.auth});
 
-  // LOAD
   Future<DashboardState> loadTrips() async {
     final user = auth.currentUser;
     if (user == null) return const DashboardState(isLoading: false);
@@ -37,7 +36,6 @@ class DashboardController {
     );
   }
 
-  // SEARCH
   DashboardState search(DashboardState state, String query) {
     final lower = query.toLowerCase();
     final filtered =
@@ -55,7 +53,6 @@ class DashboardController {
     );
   }
 
-  // SORT
   DashboardState sort(
     DashboardState state,
     SortOption option,
@@ -68,8 +65,7 @@ class DashboardController {
     );
   }
 
-  // SAVE / UNSAVE
-  Future<Set<String>> toggleSave(Set<String> current, String tripId) async {
+  Future<Set<String>> saveTrip(Set<String> current, String tripId) async {
     final user = auth.currentUser!;
     final ref = firestore.collection('users').doc(user.uid);
 
@@ -88,7 +84,6 @@ class DashboardController {
     return updated;
   }
 
-  // internal
   List<Trip> _sort(List<Trip> trips, SortOption option, SortOrder order) {
     final list = List<Trip>.from(trips);
     list.sort((a, b) {

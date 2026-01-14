@@ -15,17 +15,14 @@ class MyCollectionController {
     if (user == null) return const MyCollectionState(isLoading: false);
 
     final userDoc = await firestore.collection('users').doc(user.uid).get();
-
     final createdIds = List<String>.from(
       userDoc.data()?['createdTripIds'] ?? [],
     );
     final savedIds = List<String>.from(userDoc.data()?['savedTripIds'] ?? []);
 
-    final tripsSnap = await firestore.collection('trips').get();
+    final snap = await firestore.collection('trips').get();
     final trips =
-        tripsSnap.docs
-            .map((d) => Trip.fromJson({...d.data(), 'id': d.id}))
-            .toList();
+        snap.docs.map((d) => Trip.fromJson({...d.data(), 'id': d.id})).toList();
 
     final createdTrips = trips.where((t) => createdIds.contains(t.id)).toList();
     final savedTrips = trips.where((t) => savedIds.contains(t.id)).toList();
@@ -47,18 +44,20 @@ class MyCollectionController {
 
   MyCollectionState search(MyCollectionState state, String query) {
     final base = state.showingMyTrips ? state.createdTrips : state.savedTrips;
+    final lower = query.toLowerCase();
 
-    final q = query.toLowerCase();
+    final filtered =
+        base
+            .where(
+              (t) =>
+                  t.name.toLowerCase().contains(lower) ||
+                  t.location.toLowerCase().contains(lower),
+            )
+            .toList();
 
     return state.copyWith(
-      displayedTrips:
-          base
-              .where(
-                (t) =>
-                    t.name.toLowerCase().contains(q) ||
-                    t.location.toLowerCase().contains(q),
-              )
-              .toList(),
+      isSearching: query.isNotEmpty,
+      displayedTrips: filtered,
     );
   }
 

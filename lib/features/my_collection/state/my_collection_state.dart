@@ -5,6 +5,7 @@ class MyCollectionState {
   final List<Trip> savedTrips;
   final List<Trip> displayedTrips;
   final bool isLoading;
+  final bool isSearching;
   final bool showingMyTrips;
 
   const MyCollectionState({
@@ -12,6 +13,7 @@ class MyCollectionState {
     this.savedTrips = const [],
     this.displayedTrips = const [],
     this.isLoading = true,
+    this.isSearching = false,
     this.showingMyTrips = true,
   });
 
@@ -20,6 +22,7 @@ class MyCollectionState {
     List<Trip>? savedTrips,
     List<Trip>? displayedTrips,
     bool? isLoading,
+    bool? isSearching,
     bool? showingMyTrips,
   }) {
     return MyCollectionState(
@@ -27,6 +30,7 @@ class MyCollectionState {
       savedTrips: savedTrips ?? this.savedTrips,
       displayedTrips: displayedTrips ?? this.displayedTrips,
       isLoading: isLoading ?? this.isLoading,
+      isSearching: isSearching ?? this.isSearching,
       showingMyTrips: showingMyTrips ?? this.showingMyTrips,
     );
   }

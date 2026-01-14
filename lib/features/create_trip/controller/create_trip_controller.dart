@@ -7,7 +7,7 @@ import 'package:itinerme/core/utils/snackbar_helper.dart';
 
 import '../../../core/models/trip.dart';
 import '../../../core/models/must_visit_place.dart';
-import '../../trip/services/place_image_cache_service.dart';
+import '../../../core/services/place_image_cache_service.dart';
 import '../state/create_trip_state.dart';
 
 import 'dart:convert';

@@ -11,15 +11,12 @@ class UserService {
     final existing = await doc.get();
 
     if (existing.exists) {
-      // Only update non-avatar fields
       await doc.update({
         'name': user.name,
         'email': user.email,
-        // 'createdTripIds': user.createdTripIds,
-        // 'savedTripIds': user.savedTripIds,
+        'avatarUrl': user.avatarUrl,
       });
     } else {
-      // New user → set full
       await doc.set(user.toJson());
     }
   }

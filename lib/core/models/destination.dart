@@ -16,7 +16,7 @@ class Destination {
   double? rating;
   int? userRatingsTotal;
   String? url;
-  String? imageUrl; // NEW (Firebase URL)
+  String? imageUrl;
 
   Destination({
     required this.placeId,

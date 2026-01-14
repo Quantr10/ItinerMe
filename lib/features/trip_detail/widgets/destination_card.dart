@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:itinerme/core/models/destination.dart';
-import 'package:itinerme/core/theme/app_theme.dart';
+import '../../../core/models/destination.dart';
+import '../../../core/theme/app_theme.dart';
 
 class DestinationCard extends StatelessWidget {
   final Destination destination;
