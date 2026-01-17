@@ -26,14 +26,6 @@ class MyCollectionTripList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
-      );
-    }
-
     if (state.displayedTrips.isEmpty) {
       return EmptyTripState(
         showingMyTrips: state.currentTab == CollectionTab.myTrips,
@@ -69,36 +61,18 @@ class MyCollectionTripList extends StatelessWidget {
                               fontSize: AppTheme.largeFontSize,
                             ),
                           ),
+                          insetPadding: AppTheme.largePadding,
                           content: const Text(
                             'Are you sure you want to permanently delete this trip?',
                           ),
                           actions: [
-                            TextButton(
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.borderRadius,
-                                  ),
-                                ),
-                              ),
-                              onPressed:
-                                  () => Navigator.pop(dialogContext, false),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.errorColor,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.borderRadius,
-                                  ),
-                                ),
-                              ),
+                            AppTheme.dialogCancelButton(dialogContext),
+                            AppTheme.dialogPrimaryButton(
+                              context: dialogContext,
+                              label: 'Delete',
                               onPressed:
                                   () => Navigator.pop(dialogContext, true),
-                              child: const Text('Delete'),
+                              isPrimary: false,
                             ),
                           ],
                         );
@@ -231,28 +205,10 @@ class MyCollectionTripList extends StatelessWidget {
                 ),
               ),
               actions: [
-                TextButton(
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.borderRadius,
-                      ),
-                    ),
-                  ),
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.borderRadius,
-                      ),
-                    ),
-                  ),
+                AppTheme.dialogCancelButton(dialogContext),
+                AppTheme.dialogPrimaryButton(
+                  context: dialogContext,
+                  label: 'Create Copy',
                   onPressed:
                       valid
                           ? () => Navigator.pop(
@@ -260,7 +216,7 @@ class MyCollectionTripList extends StatelessWidget {
                             textController.text.trim(),
                           )
                           : null,
-                  child: const Text('Create Copy'),
+                  isPrimary: true,
                 ),
               ],
             );

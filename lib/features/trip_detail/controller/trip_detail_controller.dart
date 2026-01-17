@@ -158,6 +158,9 @@ class TripDetailController extends ChangeNotifier {
   }
 
   Future<bool> generateSingleDay(int dayIndex) async {
+    _state = _state.copyWith(isLoading: true);
+    notifyListeners();
+
     try {
       final prompt = '''
 You are a professional travel planner. Your task is to generate a precise list of tourist attractions in ${trip.location} for one day.
@@ -255,10 +258,14 @@ Return a valid JSON array only, no explanation or markdown:
       await FirebaseFirestore.instance.collection('trips').doc(trip.id).update({
         'itinerary': trip.itinerary.map((e) => e.toJson()).toList(),
       });
+
       notifyListeners();
       return true;
     } catch (_) {
       return false;
+    } finally {
+      _state = _state.copyWith(isLoading: false);
+      notifyListeners();
     }
   }
 
@@ -309,82 +316,92 @@ Return a valid JSON array only, no explanation or markdown:
     int dayIndex,
     AutocompletePrediction prediction,
   ) async {
-    final placeId = prediction.placeId!;
-    final details = await googlePlace.details.get(placeId);
-    final result = details?.result;
-    if (result == null) return false;
-    final exists = trip.itinerary
-        .expand((d) => d.destinations)
-        .any((d) => d.placeId == result.placeId);
-    if (exists) return false;
-    // ==== AI call ====
-    final aiResponse = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': 'gpt-4',
-        'messages': [
-          {
-            'role': 'user',
-            'content':
-                'You are a travel planner. Provide a short description and estimated visit duration for: ${result.name}, ${result.formattedAddress}. Return JSON: {"description":"...","durationMinutes":60}',
-          },
-        ],
-        'temperature': 0.7,
-      }),
-    );
-
-    final aiText = utf8.decode(aiResponse.bodyBytes);
-    final content =
-        jsonDecode(aiText)['choices'][0]['message']['content']
-            .replaceAll('```json', '')
-            .replaceAll('```', '')
-            .trim();
-
-    final aiData = jsonDecode(content);
-
-    // ==== Image ====
-    String? imageUrl;
-    if (result.photos?.isNotEmpty == true) {
-      imageUrl = await PlaceImageCacheService.cachePlacePhoto(
-        photoReference: result.photos!.first.photoReference!,
-        path: 'destinations/${trip.id}/${result.placeId}.jpg',
-      );
-    }
-
-    // ==== Build Destination ====
-    final newDest = Destination(
-      placeId: result.placeId ?? '',
-      name: result.name ?? 'Unnamed',
-      address: result.formattedAddress ?? '',
-      description: aiData['description'],
-      durationMinutes: aiData['durationMinutes'],
-      latitude: result.geometry?.location?.lat ?? 0.0,
-      longitude: result.geometry?.location?.lng ?? 0.0,
-      imageUrl: imageUrl,
-      rating: result.rating,
-      userRatingsTotal: result.userRatingsTotal,
-      website: result.website,
-      openingHours: result.openingHours?.weekdayText,
-      types: result.types,
-      url: result.url,
-      startTime: DateTime.now(),
-      endTime: DateTime.now().add(
-        Duration(minutes: aiData['durationMinutes'] ?? 60),
-      ),
-    );
-
-    // ==== Save ====
-    trip.itinerary[dayIndex].destinations.add(newDest);
-
-    await FirebaseFirestore.instance.collection('trips').doc(trip.id).update({
-      'itinerary': trip.itinerary.map((e) => e.toJson()).toList(),
-    });
+    _state = _state.copyWith(isLoading: true);
     notifyListeners();
-    return true;
+
+    try {
+      final placeId = prediction.placeId!;
+      final details = await googlePlace.details.get(placeId);
+      final result = details?.result;
+      if (result == null) return false;
+      final exists = trip.itinerary
+          .expand((d) => d.destinations)
+          .any((d) => d.placeId == result.placeId);
+      if (exists) return false;
+      // ==== AI call ====
+      final aiResponse = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4',
+          'messages': [
+            {
+              'role': 'user',
+              'content':
+                  'You are a travel planner. Provide a short description and estimated visit duration for: ${result.name}, ${result.formattedAddress}. Return JSON: {"description":"...","durationMinutes":60}',
+            },
+          ],
+          'temperature': 0.7,
+        }),
+      );
+
+      final aiText = utf8.decode(aiResponse.bodyBytes);
+      final content =
+          jsonDecode(aiText)['choices'][0]['message']['content']
+              .replaceAll('```json', '')
+              .replaceAll('```', '')
+              .trim();
+
+      final aiData = jsonDecode(content);
+
+      // ==== Image ====
+      String? imageUrl;
+      if (result.photos?.isNotEmpty == true) {
+        imageUrl = await PlaceImageCacheService.cachePlacePhoto(
+          photoReference: result.photos!.first.photoReference!,
+          path: 'destinations/${trip.id}/${result.placeId}.jpg',
+        );
+      }
+
+      // ==== Build Destination ====
+      final newDest = Destination(
+        placeId: result.placeId ?? '',
+        name: result.name ?? 'Unnamed',
+        address: result.formattedAddress ?? '',
+        description: aiData['description'],
+        durationMinutes: aiData['durationMinutes'],
+        latitude: result.geometry?.location?.lat ?? 0.0,
+        longitude: result.geometry?.location?.lng ?? 0.0,
+        imageUrl: imageUrl,
+        rating: result.rating,
+        userRatingsTotal: result.userRatingsTotal,
+        website: result.website,
+        openingHours: result.openingHours?.weekdayText,
+        types: result.types,
+        url: result.url,
+        startTime: DateTime.now(),
+        endTime: DateTime.now().add(
+          Duration(minutes: aiData['durationMinutes'] ?? 60),
+        ),
+      );
+
+      // ==== Save ====
+      trip.itinerary[dayIndex].destinations.add(newDest);
+
+      await FirebaseFirestore.instance.collection('trips').doc(trip.id).update({
+        'itinerary': trip.itinerary.map((e) => e.toJson()).toList(),
+      });
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      _state = _state.copyWith(isLoading: false);
+      notifyListeners();
+    }
   }
 
   Future<bool> updateCoverFromGooglePhoto(String photoReference) async {

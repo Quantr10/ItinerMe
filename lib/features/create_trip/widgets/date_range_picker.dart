@@ -23,7 +23,7 @@ class DateRangePicker extends StatelessWidget {
 
         await showDialog(
           context: context,
-          builder: (context) {
+          builder: (dialogContext) {
             return AlertDialog(
               backgroundColor: Colors.white,
               title: const Text(
@@ -68,28 +68,10 @@ class DateRangePicker extends StatelessWidget {
                 ),
               ),
               actions: [
-                TextButton(
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.borderRadius,
-                      ),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.borderRadius,
-                      ),
-                    ),
-                  ),
+                AppTheme.dialogCancelButton(dialogContext),
+                AppTheme.dialogPrimaryButton(
+                  context: dialogContext,
+                  label: 'Save',
                   onPressed: () {
                     if (selectedDates.length == 2 &&
                         selectedDates[0] != null &&
@@ -98,7 +80,7 @@ class DateRangePicker extends StatelessWidget {
                     }
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Save'),
+                  isPrimary: true,
                 ),
               ],
             );

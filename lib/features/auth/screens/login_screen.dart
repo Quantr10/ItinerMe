@@ -81,13 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     if (_state.isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-          ),
-        ),
-      );
+      return Positioned.fill(child: AppTheme.loadingScreen(overlay: true));
     }
 
     return Scaffold(

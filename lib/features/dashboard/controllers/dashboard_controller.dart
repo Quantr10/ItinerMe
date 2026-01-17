@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:itinerme/core/models/trip.dart';
 
 import '../state/dashboard_state.dart';
+import '../../../core/models/trip.dart';
 import '../../../core/enums/sort_enums.dart';
 
 class DashboardController {

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:itinerme/core/enums/transportation_enums.dart';
-import 'package:itinerme/core/models/itinerary_day.dart';
-import 'package:itinerme/core/models/must_visit_place.dart';
+import '../enums/transportation_enums.dart';
+import '../models/itinerary_day.dart';
+import '../models/must_visit_place.dart';
 
 class Trip {
   String id;

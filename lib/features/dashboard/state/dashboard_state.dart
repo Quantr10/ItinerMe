@@ -1,4 +1,4 @@
-import 'package:itinerme/core/models/trip.dart';
+import '../../../core/models/trip.dart';
 import '../../../core/enums/sort_enums.dart';
 
 class DashboardState {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:itinerme/core/theme/app_theme.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../controllers/dashboard_controller.dart';
 import '../state/dashboard_state.dart';
 import 'dashboard_trip_card.dart';
@@ -25,14 +25,6 @@ class DashboardTripList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
-      );
-    }
-
     if (state.displayedTrips.isEmpty) {
       return EmptyDashboardState(isSearching: state.isSearching);
     }

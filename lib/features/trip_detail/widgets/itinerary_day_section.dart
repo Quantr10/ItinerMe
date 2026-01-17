@@ -76,54 +76,32 @@ class ItineraryDaySection extends StatelessWidget {
                       onTap: () async {
                         final confirm = await showDialog<bool>(
                           context: context,
-                          builder:
-                              (_) => AlertDialog(
-                                backgroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.borderRadius,
-                                  ),
+                          builder: (dialogContext) {
+                            return AlertDialog(
+                              backgroundColor: Colors.white,
+                              title: const Text(
+                                'Clear this day',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: AppTheme.largeFontSize,
                                 ),
-                                title: const Text(
-                                  'Clear this day',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: AppTheme.largeFontSize,
-                                  ),
-                                ),
-                                content: const Text(
-                                  'This will remove all destinations from this day. Continue?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    style: ElevatedButton.styleFrom(
-                                      foregroundColor: Colors.black,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          AppTheme.borderRadius,
-                                        ),
-                                      ),
-                                    ),
-                                    onPressed:
-                                        () => Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.errorColor,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          AppTheme.borderRadius,
-                                        ),
-                                      ),
-                                    ),
-                                    onPressed:
-                                        () => Navigator.pop(context, true),
-                                    child: const Text('Clear'),
-                                  ),
-                                ],
                               ),
+                              insetPadding: AppTheme.largePadding,
+                              content: const Text(
+                                'This will remove all destinations from this day. Continue?',
+                              ),
+                              actions: [
+                                AppTheme.dialogCancelButton(dialogContext),
+                                AppTheme.dialogPrimaryButton(
+                                  context: dialogContext,
+                                  label: 'Clear',
+                                  onPressed:
+                                      () => Navigator.pop(dialogContext, true),
+                                  isPrimary: false,
+                                ),
+                              ],
+                            );
+                          },
                         );
 
                         if (confirm != true) return;
@@ -221,49 +199,33 @@ class ItineraryDaySection extends StatelessWidget {
                         onRemove: (dayIdx, destIdx) async {
                           final confirm = await showDialog<bool>(
                             context: context,
-                            builder:
-                                (_) => AlertDialog(
-                                  backgroundColor: Colors.white,
-                                  title: const Text(
-                                    'Remove destination',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: AppTheme.largeFontSize,
-                                    ),
+                            builder: (dialogContext) {
+                              return AlertDialog(
+                                backgroundColor: Colors.white,
+                                title: const Text(
+                                  'Remove destination',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: AppTheme.largeFontSize,
                                   ),
-                                  content: const Text(
-                                    'Are you sure you want to remove this destination?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      style: ElevatedButton.styleFrom(
-                                        foregroundColor: Colors.black,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            AppTheme.borderRadius,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed:
-                                          () => Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.errorColor,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            AppTheme.borderRadius,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed:
-                                          () => Navigator.pop(context, true),
-                                      child: const Text('Remove'),
-                                    ),
-                                  ],
                                 ),
+                                insetPadding: AppTheme.largePadding,
+                                content: const Text(
+                                  'Are you sure you want to remove this destination?',
+                                ),
+                                actions: [
+                                  AppTheme.dialogCancelButton(dialogContext),
+                                  AppTheme.dialogPrimaryButton(
+                                    context: dialogContext,
+                                    label: 'Remove',
+                                    onPressed:
+                                        () =>
+                                            Navigator.pop(dialogContext, true),
+                                    isPrimary: false,
+                                  ),
+                                ],
+                              );
+                            },
                           );
 
                           if (confirm != true) return;

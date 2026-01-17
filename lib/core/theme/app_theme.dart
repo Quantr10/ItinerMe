@@ -93,16 +93,13 @@ class AppTheme {
   // ===== STANDARD BUTTON =====
   static Widget elevatedButton({
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     bool isPrimary = true,
-    bool isLoading = false,
-    // double height = fieldHeight,
   }) {
     return SizedBox(
       width: double.infinity,
-      // height: height,
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: isPrimary ? Colors.white : errorColor,
           foregroundColor: isPrimary ? primaryColor : Colors.white,
@@ -111,20 +108,13 @@ class AppTheme {
           ),
           elevation: 2,
         ),
-        child:
-            isLoading
-                ? const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                  ),
-                )
-                : Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: defaultFontSize,
-                  ),
-                ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: defaultFontSize,
+          ),
+        ),
       ),
     );
   }
@@ -148,5 +138,53 @@ class AppTheme {
           duration: messageDuration,
         ),
       );
+  }
+
+  // ===== LOADING WIDGET =====
+
+  static Widget loadingScreen({bool overlay = false}) {
+    return Container(
+      color:
+          overlay ? Colors.black.withValues(alpha: 0.25) : Colors.transparent,
+      child: const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+        ),
+      ),
+    );
+  }
+
+  // ===== BUTTONS =====
+
+  static Widget dialogCancelButton(BuildContext context) {
+    return TextButton(
+      style: ElevatedButton.styleFrom(
+        foregroundColor: Colors.black,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+        ),
+      ),
+      onPressed: () => Navigator.pop(context),
+      child: const Text('Cancel'),
+    );
+  }
+
+  static Widget dialogPrimaryButton({
+    required BuildContext context,
+    required String label,
+    required VoidCallback? onPressed,
+    bool isPrimary = true,
+  }) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isPrimary ? primaryColor : errorColor,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+        ),
+      ),
+      onPressed: onPressed,
+      child: Text(label),
+    );
   }
 }

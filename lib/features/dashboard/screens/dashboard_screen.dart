@@ -45,51 +45,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MainScaffold(
-      currentIndex: 0,
-      body: Padding(
-        padding: AppTheme.defaultPadding,
-        child: Column(
-          children: [
-            DashboardSearchBar(
-              controller: _searchController,
-              onChanged:
-                  (q) => setState(() => _state = _controller.search(_state, q)),
-            ),
-            AppTheme.smallSpacing,
-            DashboardSortBar(
-              option: _state.sortOption,
-              order: _state.sortOrder,
-              onSortChange:
-                  (o) => setState(
-                    () =>
-                        _state = _controller.sort(_state, o, _state.sortOrder),
+    return Stack(
+      children: [
+        MainScaffold(
+          currentIndex: 0,
+          body: Padding(
+            padding: AppTheme.defaultPadding,
+            child: Column(
+              children: [
+                DashboardSearchBar(
+                  controller: _searchController,
+                  onChanged:
+                      (q) => setState(
+                        () => _state = _controller.search(_state, q),
+                      ),
+                ),
+                AppTheme.smallSpacing,
+                DashboardSortBar(
+                  option: _state.sortOption,
+                  order: _state.sortOrder,
+                  onSortChange:
+                      (o) => setState(
+                        () =>
+                            _state = _controller.sort(
+                              _state,
+                              o,
+                              _state.sortOrder,
+                            ),
+                      ),
+                  onToggleOrder:
+                      () => setState(
+                        () =>
+                            _state = _controller.sort(
+                              _state,
+                              _state.sortOption,
+                              _state.sortOrder == SortOrder.ascending
+                                  ? SortOrder.descending
+                                  : SortOrder.ascending,
+                            ),
+                      ),
+                ),
+                AppTheme.mediumSpacing,
+                Expanded(
+                  child: DashboardTripList(
+                    state: _state,
+                    controller: _controller,
+                    formatter: _formatter,
+                    onStateChanged: () => setState(() {}),
+                    updateState: (s) => setState(() => _state = s),
                   ),
-              onToggleOrder:
-                  () => setState(
-                    () =>
-                        _state = _controller.sort(
-                          _state,
-                          _state.sortOption,
-                          _state.sortOrder == SortOrder.ascending
-                              ? SortOrder.descending
-                              : SortOrder.ascending,
-                        ),
-                  ),
+                ),
+              ],
             ),
-            AppTheme.mediumSpacing,
-            Expanded(
-              child: DashboardTripList(
-                state: _state,
-                controller: _controller,
-                formatter: _formatter,
-                onStateChanged: () => setState(() {}),
-                updateState: (s) => setState(() => _state = s),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        if (_state.isLoading) Positioned.fill(child: AppTheme.loadingScreen()),
+      ],
     );
   }
 }

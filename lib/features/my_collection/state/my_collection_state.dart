@@ -1,4 +1,4 @@
-import 'package:itinerme/core/models/trip.dart';
+import '../../../core/models/trip.dart';
 import '../../../core/enums/tab_enum.dart';
 
 class MyCollectionState {

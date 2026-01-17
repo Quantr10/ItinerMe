@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:itinerme/core/models/trip.dart';
-import 'package:itinerme/features/trip_detail/screen/trip_detail_screen.dart';
-import 'package:itinerme/core/theme/app_theme.dart';
+import '../../trip_detail/screen/trip_detail_screen.dart';
+import '../../../core/models/trip.dart';
+import '../../../core/theme/app_theme.dart';
 
 class TripCard extends StatelessWidget {
   final Trip trip;

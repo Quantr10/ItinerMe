@@ -45,65 +45,72 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MainScaffold(
-      currentIndex: 1,
-      body: Padding(
-        padding: AppTheme.defaultPadding,
-        child: Column(
-          children: [
-            TripSearchBar(
-              controller: _searchController,
-              onChanged:
-                  (q) => setState(() => _state = _controller.search(_state, q)),
-            ),
-            AppTheme.smallSpacing,
-            Row(
+    return Stack(
+      children: [
+        MainScaffold(
+          currentIndex: 1,
+          body: Padding(
+            padding: AppTheme.defaultPadding,
+            child: Column(
               children: [
-                Expanded(
-                  child: TripTabButton(
-                    label: 'MY TRIPS',
-                    selected: _state.currentTab == CollectionTab.myTrips,
-                    onTap:
-                        () => setState(() {
-                          _searchController.clear();
-
-                          _state = _controller.toggleTab(
-                            _state,
-                            CollectionTab.myTrips,
-                          );
-                        }),
-                  ),
+                TripSearchBar(
+                  controller: _searchController,
+                  onChanged:
+                      (q) => setState(
+                        () => _state = _controller.search(_state, q),
+                      ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TripTabButton(
-                    label: 'SAVED',
-                    selected: _state.currentTab == CollectionTab.saved,
-                    onTap:
-                        () => setState(() {
-                          _searchController.clear();
+                AppTheme.smallSpacing,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TripTabButton(
+                        label: 'MY TRIPS',
+                        selected: _state.currentTab == CollectionTab.myTrips,
+                        onTap:
+                            () => setState(() {
+                              _searchController.clear();
 
-                          _state = _controller.toggleTab(
-                            _state,
-                            CollectionTab.saved,
-                          );
-                        }),
+                              _state = _controller.toggleTab(
+                                _state,
+                                CollectionTab.myTrips,
+                              );
+                            }),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TripTabButton(
+                        label: 'SAVED',
+                        selected: _state.currentTab == CollectionTab.saved,
+                        onTap:
+                            () => setState(() {
+                              _searchController.clear();
+
+                              _state = _controller.toggleTab(
+                                _state,
+                                CollectionTab.saved,
+                              );
+                            }),
+                      ),
+                    ),
+                  ],
+                ),
+                AppTheme.mediumSpacing,
+                Expanded(
+                  child: MyCollectionTripList(
+                    state: _state,
+                    controller: _controller,
+                    formatter: _formatter,
+                    updateState: (s) => setState(() => _state = s),
                   ),
                 ),
               ],
             ),
-            AppTheme.mediumSpacing,
-            Expanded(
-              child: MyCollectionTripList(
-                state: _state,
-                controller: _controller,
-                formatter: _formatter,
-                updateState: (s) => setState(() => _state = s),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        if (_state.isLoading) Positioned.fill(child: AppTheme.loadingScreen()),
+      ],
     );
   }
 }

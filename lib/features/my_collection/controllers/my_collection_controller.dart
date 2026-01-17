@@ -70,19 +70,12 @@ class MyCollectionController {
 
   Future<void> deleteTrip(String tripId) async {
     final user = auth.currentUser!;
+
     await firestore.collection('trips').doc(tripId).delete();
 
     await firestore.collection('users').doc(user.uid).update({
       'createdTripIds': FieldValue.arrayRemove([tripId]),
     });
-
-    // remove from all users' saved lists
-    final users = await firestore.collection('users').get();
-    for (final u in users.docs) {
-      await u.reference.update({
-        'savedTripIds': FieldValue.arrayRemove([tripId]),
-      });
-    }
   }
 
   Future<void> unsaveTrip(String tripId) async {

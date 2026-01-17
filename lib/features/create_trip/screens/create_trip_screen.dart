@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:itinerme/core/enums/interest_tag_enums.dart';
 import 'package:provider/provider.dart';
 import 'package:google_place/google_place.dart';
 
+import '../../../core/enums/interest_tag_enums.dart';
 import '../../../core/widgets/main_scaffold.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/must_visit_place.dart';
@@ -68,212 +68,193 @@ class _CreateTripViewState extends State<_CreateTripView> {
         !_budgetController.text.trim().isEmpty &&
         state.transportation != null;
 
-    return MainScaffold(
-      currentIndex: 2,
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: AppTheme.defaultPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppTheme.mediumSpacing,
-                const Center(
-                  child: Text(
-                    'Plan a New Trip',
-                    style: TextStyle(
-                      fontSize: AppTheme.titleFontSize,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                ),
-                AppTheme.mediumSpacing,
-
-                // Trip Name
-                SizedBox(
-                  height: AppTheme.fieldHeight,
-                  child: TextField(
-                    controller: _nameController,
-                    autofocus: true,
-                    decoration: AppTheme.inputDecoration(
-                      'Trip Name',
-                      onClear: () => _nameController.clear(),
-                    ),
-                    style: const TextStyle(fontSize: AppTheme.defaultFontSize),
-                  ),
-                ),
-                AppTheme.smallSpacing,
-
-                // Destination
-                SizedBox(
-                  height: AppTheme.fieldHeight,
-                  child: TextField(
-                    controller: _destinationController,
-                    autofocus: true,
-                    onChanged: controller.searchDestination,
-                    decoration: AppTheme.inputDecoration(
-                      'Destination',
-                      onClear: () => _destinationController.clear(),
-                    ),
-                    style: const TextStyle(fontSize: AppTheme.defaultFontSize),
-                  ),
-                ),
-
-                PredictionList<AutocompletePrediction>(
-                  predictions: state.destinationPredictions,
-                  icon: Icons.place,
-                  itemText: (p) => p.description ?? '',
-                  onSelect: (p) {
-                    _destinationController.text = p.description ?? '';
-                    controller.selectDestination(p);
-                  },
-                ),
-
-                AppTheme.smallSpacing,
-
-                DateRangePicker(
-                  startDate: state.startDate,
-                  endDate: state.endDate,
-                  onSelect: controller.setDateRange,
-                ),
-
-                AppTheme.smallSpacing,
-
-                Row(
+    return Stack(
+      children: [
+        MainScaffold(
+          currentIndex: 2,
+          body: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: AppTheme.defaultPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: AppTheme.fieldHeight,
-                        child: TextField(
-                          controller: _budgetController,
-                          autofocus: true,
-                          keyboardType: TextInputType.number,
-                          decoration: AppTheme.inputDecoration(
-                            'Budget',
-                            onClear: () => _budgetController.clear(),
-                          ),
-                          style: const TextStyle(
-                            fontSize: AppTheme.defaultFontSize,
-                          ),
+                    AppTheme.mediumSpacing,
+                    const Center(
+                      child: Text(
+                        'Plan a New Trip',
+                        style: TextStyle(
+                          fontSize: AppTheme.titleFontSize,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryColor,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: SizedBox(
-                        height: AppTheme.fieldHeight,
-                        child: TransportationDropdown(
-                          value: state.transportation,
-                          onChanged: controller.setTransportation,
+                    AppTheme.mediumSpacing,
+
+                    // Trip Name
+                    SizedBox(
+                      height: AppTheme.fieldHeight,
+                      child: TextField(
+                        controller: _nameController,
+                        autofocus: true,
+                        decoration: AppTheme.inputDecoration(
+                          'Trip Name',
+                          onClear: () => _nameController.clear(),
+                        ),
+                        style: const TextStyle(
+                          fontSize: AppTheme.defaultFontSize,
                         ),
                       ),
                     ),
+                    AppTheme.smallSpacing,
+
+                    // Destination
+                    SizedBox(
+                      height: AppTheme.fieldHeight,
+                      child: TextField(
+                        controller: _destinationController,
+                        autofocus: true,
+                        onChanged: controller.searchDestination,
+                        decoration: AppTheme.inputDecoration(
+                          'Destination',
+                          onClear: () => _destinationController.clear(),
+                        ),
+                        style: const TextStyle(
+                          fontSize: AppTheme.defaultFontSize,
+                        ),
+                      ),
+                    ),
+
+                    PredictionList<AutocompletePrediction>(
+                      predictions: state.destinationPredictions,
+                      icon: Icons.place,
+                      itemText: (p) => p.description ?? '',
+                      onSelect: (p) {
+                        _destinationController.text = p.description ?? '';
+                        controller.selectDestination(p);
+                      },
+                    ),
+
+                    AppTheme.smallSpacing,
+
+                    DateRangePicker(
+                      startDate: state.startDate,
+                      endDate: state.endDate,
+                      onSelect: controller.setDateRange,
+                    ),
+
+                    AppTheme.smallSpacing,
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: AppTheme.fieldHeight,
+                            child: TextField(
+                              controller: _budgetController,
+                              autofocus: true,
+                              keyboardType: TextInputType.number,
+                              decoration: AppTheme.inputDecoration(
+                                'Budget',
+                                onClear: () => _budgetController.clear(),
+                              ),
+                              style: const TextStyle(
+                                fontSize: AppTheme.defaultFontSize,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: AppTheme.fieldHeight,
+                            child: TransportationDropdown(
+                              value: state.transportation,
+                              onChanged: controller.setTransportation,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    AppTheme.smallSpacing,
+
+                    InterestsField(
+                      controller: _customTagController,
+                      interestPredictions: state.interestPredictions,
+                      interests: state.interests,
+                      availableTags: availableTags,
+                      onSearch:
+                          (v) => controller.searchInterests(v, availableTags),
+                      onAdd: controller.addInterest,
+                      onRemove: controller.removeInterest,
+                    ),
+
+                    AppTheme.smallSpacing,
+
+                    SizedBox(
+                      height: AppTheme.fieldHeight,
+                      child: TextField(
+                        controller: _mustVisitController,
+                        autofocus: true,
+                        onChanged: controller.searchMustVisit,
+                        decoration: AppTheme.inputDecoration(
+                          'Add Must-Visit Places',
+                          onClear: () => _mustVisitController.clear(),
+                        ),
+                        style: const TextStyle(
+                          fontSize: AppTheme.defaultFontSize,
+                        ),
+                      ),
+                    ),
+
+                    PredictionList<AutocompletePrediction>(
+                      predictions: state.mustVisitPredictions,
+                      icon: Icons.place,
+                      itemText: (p) => p.description ?? '',
+                      onSelect: (p) {
+                        controller.selectMustVisit(p);
+                        _mustVisitController.clear();
+                      },
+                    ),
+
+                    if (state.mustVisitPlaces.isNotEmpty) ...[
+                      AppTheme.smallSpacing,
+                      TagChips<MustVisitPlace>(
+                        tags: state.mustVisitPlaces,
+                        itemText: (p) => p.name,
+                        onDelete: controller.removeMustVisit,
+                      ),
+                    ],
+
+                    AppTheme.largeSpacing,
+
+                    AppTheme.elevatedButton(
+                      label: 'GENERATE TRIP',
+                      isPrimary: true,
+                      onPressed:
+                          state.isLoading || !isFormReady
+                              ? null
+                              : () {
+                                controller.submitTrip(
+                                  tripName: _nameController.text.trim(),
+                                  budget: int.parse(
+                                    _budgetController.text.trim(),
+                                  ),
+                                );
+                              },
+                    ),
+                    AppTheme.mediumSpacing,
                   ],
                 ),
-
-                AppTheme.smallSpacing,
-
-                InterestsField(
-                  controller: _customTagController,
-                  interestPredictions: state.interestPredictions,
-                  interests: state.interests,
-                  availableTags: availableTags,
-                  onSearch: (v) => controller.searchInterests(v, availableTags),
-                  onAdd: controller.addInterest,
-                  onRemove: controller.removeInterest,
-                ),
-
-                AppTheme.smallSpacing,
-
-                SizedBox(
-                  height: AppTheme.fieldHeight,
-                  child: TextField(
-                    controller: _mustVisitController,
-                    autofocus: true,
-                    onChanged: controller.searchMustVisit,
-                    decoration: AppTheme.inputDecoration(
-                      'Add Must-Visit Places',
-                      onClear: () => _mustVisitController.clear(),
-                    ),
-                    style: const TextStyle(fontSize: AppTheme.defaultFontSize),
-                  ),
-                ),
-
-                PredictionList<AutocompletePrediction>(
-                  predictions: state.mustVisitPredictions,
-                  icon: Icons.place,
-                  itemText: (p) => p.description ?? '',
-                  onSelect: (p) {
-                    controller.selectMustVisit(p);
-                    _mustVisitController.clear();
-                  },
-                ),
-
-                if (state.mustVisitPlaces.isNotEmpty) ...[
-                  AppTheme.smallSpacing,
-                  TagChips<MustVisitPlace>(
-                    tags: state.mustVisitPlaces,
-                    itemText: (p) => p.name,
-                    onDelete: controller.removeMustVisit,
-                  ),
-                ],
-
-                AppTheme.largeSpacing,
-
-                SizedBox(
-                  width: double.infinity,
-                  height: AppTheme.fieldHeight,
-                  child: ElevatedButton(
-                    onPressed:
-                        state.isLoading || !isFormReady
-                            ? null
-                            : () {
-                              controller.submitTrip(
-                                tripName: _nameController.text.trim(),
-                                budget: int.parse(
-                                  _budgetController.text.trim(),
-                                ),
-                              );
-                            },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.borderRadius,
-                        ),
-                      ),
-                    ),
-                    child: const Text(
-                      'GENERATE TRIP',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: AppTheme.defaultFontSize,
-                      ),
-                    ),
-                  ),
-                ),
-                AppTheme.mediumSpacing,
-              ],
-            ),
+              ),
+            ],
           ),
-
-          if (state.isLoading)
-            Stack(
-              children: [
-                Container(color: Colors.white.withOpacity(0.7)),
-                const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppTheme.primaryColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
+        ),
+        if (state.isLoading)
+          Positioned.fill(child: AppTheme.loadingScreen(overlay: true)),
+      ],
     );
   }
 }

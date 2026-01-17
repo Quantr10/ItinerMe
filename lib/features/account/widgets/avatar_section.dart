@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:itinerme/core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 
 class AvatarSection extends StatelessWidget {
   final ImageProvider? avatar;
@@ -28,14 +28,6 @@ class AvatarSection extends StatelessWidget {
                     ? const Icon(Icons.person, size: 60, color: Colors.white)
                     : null,
           ),
-          if (isUploading)
-            const Positioned.fill(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppTheme.primaryColor,
-                ),
-              ),
-            ),
           Positioned(
             bottom: 0,
             right: 0,
@@ -43,7 +35,7 @@ class AvatarSection extends StatelessWidget {
               onTap: isUploading ? null : onPickImage,
               child: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppTheme.primaryColor,
                   shape: BoxShape.circle,
                 ),

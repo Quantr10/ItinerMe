@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:itinerme/core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 
 class TripTabButton extends StatelessWidget {
   final String label;

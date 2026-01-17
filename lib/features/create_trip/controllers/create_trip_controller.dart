@@ -3,19 +3,19 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_place/google_place.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:itinerme/core/enums/transportation_enums.dart';
-import 'package:itinerme/core/theme/app_theme.dart';
-import 'package:itinerme/core/enums/interest_tag_enums.dart';
 
+import '../../../core/enums/transportation_enums.dart';
+import '../../../core/enums/interest_tag_enums.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/models/trip.dart';
 import '../../../core/models/must_visit_place.dart';
+import '../../../core/models/destination.dart';
+import '../../../core/models/itinerary_day.dart';
 import '../../../core/services/place_image_cache_service.dart';
 import '../state/create_trip_state.dart';
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:itinerme/core/models/destination.dart';
-import 'package:itinerme/core/models/itinerary_day.dart';
 
 class CreateTripController extends ChangeNotifier {
   CreateTripState _state = const CreateTripState();

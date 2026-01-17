@@ -56,15 +56,26 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
+  void _scrollToDay(int index) {
+    final keyContext = _dayKeys[index]?.currentContext;
+    if (keyContext != null) {
+      Scrollable.ensureVisible(
+        keyContext,
+        duration: AppTheme.animationDuration,
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   Future<void> _openDateRangePicker() async {
     List<DateTime?> selectedDates = [
       widget.trip.startDate,
       widget.trip.endDate,
     ];
 
-    await showDialog(
+    final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.white,
           title: const Text(
@@ -97,36 +108,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   color: AppTheme.hintColor,
                 ),
                 modePickersGap: 8,
+
                 firstDate: DateTime.now().subtract(const Duration(days: 365)),
                 lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
               ),
               value: selectedDates,
-              onValueChanged: (dates) {
-                setState(() {
-                  selectedDates = dates;
-                });
-              },
+              onValueChanged: (dates) => selectedDates = dates,
             ),
           ),
           actions: [
-            TextButton(
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                ),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                ),
-              ),
+            AppTheme.dialogCancelButton(dialogContext),
+            AppTheme.dialogPrimaryButton(
+              context: dialogContext,
+              label: 'Save',
               onPressed: () async {
                 if (selectedDates.length == 2 &&
                     selectedDates[0] != null &&
@@ -135,8 +129,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     selectedDates[0]!.year,
                     selectedDates[0]!.month,
                     selectedDates[0]!.day,
-                    0,
-                    0,
                   );
                   final newEnd = DateTime(
                     selectedDates[1]!.year,
@@ -146,33 +138,39 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     59,
                   );
 
-                  final ok = await controller.changeDateRange(newStart, newEnd);
-                  if (ok) {
-                    _syncDayKeys();
-                    AppTheme.success('Date range updated');
-                  } else {
-                    AppTheme.error('Failed to update date');
-                  }
+                  final success = await controller.changeDateRange(
+                    newStart,
+                    newEnd,
+                  );
+
+                  Navigator.pop(dialogContext, success);
+                } else {
+                  Navigator.pop(dialogContext, false);
                 }
-                Navigator.of(context).pop();
               },
-              child: const Text('Save'),
             ),
           ],
         );
       },
     );
+
+    if (ok == true) {
+      _syncDayKeys();
+      AppTheme.success('Date range updated');
+    } else if (ok == false) {
+      AppTheme.error('Failed to update date');
+    }
   }
 
-  void _showAddDestinationDialog(int dayIndex) {
+  Future<void> _showAddDestinationDialog(int dayIndex) async {
     String query = '';
     List<AutocompletePrediction> results = [];
     AutocompletePrediction? selectedPrediction;
     final TextEditingController _searchController = TextEditingController();
 
-    showDialog(
+    final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
@@ -190,6 +188,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 width: 350,
                 child: Column(
                   children: [
+                    // ===== GIỮ NGUYÊN TEXTFIELD CỦA BẠN =====
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -205,21 +204,17 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                           autofocus: true,
                           onChanged: (value) async {
                             query = value.trim();
-
                             if (query.isEmpty) {
                               if (Navigator.of(context).canPop()) {
                                 setModalState(() => results = []);
                               }
                               return;
                             }
-
                             final list = await controller
                                 .searchDestinationInTrip(query);
-
                             if (!context.mounted ||
                                 !Navigator.of(context).canPop())
                               return;
-
                             setModalState(() => results = list);
                           },
                           decoration: AppTheme.inputDecoration(
@@ -228,7 +223,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             prefixIcon: const Icon(
                               Icons.search,
                               color: AppTheme.primaryColor,
-                              size: AppTheme.largeFontSize,
+                              size: AppTheme.largeIconFont,
                             ),
                           ),
                           style: const TextStyle(
@@ -237,7 +232,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         ),
                       ),
                     ),
+
                     AppTheme.smallSpacing,
+
                     if (results.isNotEmpty)
                       Expanded(
                         child: ListView.builder(
@@ -251,7 +248,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                               ),
                               title: Text(
                                 prediction.description ?? '',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: AppTheme.defaultFontSize,
                                   color: Colors.black,
                                 ),
@@ -273,47 +270,24 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 ),
               ),
               actions: [
-                TextButton(
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.borderRadius,
-                      ),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.borderRadius,
-                      ),
-                    ),
-                  ),
-                  onPressed: () async {
-                    if (selectedPrediction == null) {
-                      AppTheme.error('Please select a place');
-                      return;
-                    }
-                    final ok = await controller.addDestinationFromSearch(
-                      dayIndex,
-                      selectedPrediction!,
-                    );
+                AppTheme.dialogCancelButton(dialogContext),
 
-                    if (ok) {
-                      AppTheme.success('Destination added');
-                    } else {
-                      AppTheme.error('Destination already exists');
-                    }
+                AppTheme.dialogPrimaryButton(
+                  context: dialogContext,
+                  label: 'Add',
+                  onPressed:
+                      selectedPrediction == null
+                          ? null
+                          : () async {
+                            final success = await controller
+                                .addDestinationFromSearch(
+                                  dayIndex,
+                                  selectedPrediction!,
+                                );
 
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Add'),
+                            // return result
+                            Navigator.pop(dialogContext, success);
+                          },
                 ),
               ],
             );
@@ -321,16 +295,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         );
       },
     );
-  }
 
-  void _scrollToDay(int index) {
-    final keyContext = _dayKeys[index]?.currentContext;
-    if (keyContext != null) {
-      Scrollable.ensureVisible(
-        keyContext,
-        duration: AppTheme.animationDuration,
-        curve: Curves.easeInOut,
-      );
+    // ===== SNACKBAR OUTSIDE =====
+    if (ok == true) {
+      AppTheme.success('Destination added');
+    } else if (ok == false) {
+      AppTheme.error('Destination already exists');
     }
   }
 
@@ -385,208 +355,181 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   Future<void> _selectCoverFromGooglePhotos() async {
-    try {
-      final photos = await controller.getTripPhotoReferences();
+    final photos = await controller.getTripPhotoReferences();
 
-      if (photos.isEmpty) {
-        AppTheme.error('No photos available for this location');
-        return;
-      }
+    if (photos.isEmpty) {
+      AppTheme.error('No photos available for this location');
+      return;
+    }
 
-      String? selectedPhotoReference;
+    String? selectedPhotoReference;
 
-      await showDialog(
-        context: context,
-        builder:
-            (_) => StatefulBuilder(
-              builder: (context, setState) {
-                return AlertDialog(
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text(
+                'Choose Cover Image',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: AppTheme.largeFontSize,
+                ),
+              ),
+              backgroundColor: Colors.white,
+              insetPadding: AppTheme.largePadding,
+              content: SizedBox(
+                width: double.maxFinite,
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  itemCount: photos.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 9,
+                    mainAxisSpacing: 8,
                   ),
-                  title: const Text(
-                    'Choose Cover Image',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: AppTheme.largeFontSize,
-                    ),
-                  ),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      itemCount: photos.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 9,
-                            mainAxisSpacing: 8,
+                  itemBuilder: (context, index) {
+                    final ref = photos[index];
+                    final url =
+                        'https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=$ref&key=${dotenv.env['GOOGLE_MAPS_API_KEY']}';
+
+                    final isSelected = selectedPhotoReference == ref;
+
+                    return GestureDetector(
+                      onTap:
+                          () => setState(() {
+                            selectedPhotoReference = ref;
+                          }),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              url,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Center(
+                                  child: Positioned.fill(
+                                    child: AppTheme.loadingScreen(),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Center(
+                                  child: Icon(Icons.broken_image),
+                                );
+                              },
+                            ),
                           ),
-                      itemBuilder: (context, index) {
-                        final ref = photos[index];
-                        final url =
-                            'https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=$ref&key=${dotenv.env['GOOGLE_MAPS_API_KEY']}';
-
-                        final isSelected = selectedPhotoReference == ref;
-
-                        return GestureDetector(
-                          onTap:
-                              () => setState(() {
-                                selectedPhotoReference = ref;
-                              }),
-                          child: Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  url,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  loadingBuilder: (context, child, progress) {
-                                    return progress == null
-                                        ? child
-                                        : Center(
-                                          child: CircularProgressIndicator(
-                                            value:
-                                                progress.expectedTotalBytes !=
-                                                        null
-                                                    ? progress
-                                                            .cumulativeBytesLoaded /
-                                                        progress
-                                                            .expectedTotalBytes!
-                                                    : null,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  AppTheme.primaryColor,
-                                                ),
-                                          ),
-                                        );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Center(
-                                      child: Icon(Icons.broken_image),
-                                    );
-                                  },
+                          if (isSelected)
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle,
+                                  color: AppTheme.primaryColor,
                                 ),
                               ),
-                              if (isSelected)
-                                Positioned(
-                                  top: 6,
-                                  right: 6,
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.check_circle,
-                                      color: AppTheme.primaryColor,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.borderRadius,
-                          ),
-                        ),
+                            ),
+                        ],
                       ),
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.borderRadius,
-                          ),
-                        ),
-                      ),
-                      onPressed:
-                          selectedPhotoReference == null
-                              ? null
-                              : () async {
-                                final ok = await controller
-                                    .updateCoverFromGooglePhoto(
-                                      selectedPhotoReference!,
-                                    );
-                                Navigator.pop(context);
-                                if (ok) {
-                                  AppTheme.success('Cover photo updated');
-                                } else {
-                                  AppTheme.error(
-                                    'Failed to update cover photo',
-                                  );
-                                }
-                              },
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                AppTheme.dialogCancelButton(dialogContext),
+                AppTheme.dialogPrimaryButton(
+                  context: dialogContext,
+                  label: 'Select',
+                  onPressed:
+                      selectedPhotoReference == null
+                          ? null
+                          : () async {
+                            final success = await controller
+                                .updateCoverFromGooglePhoto(
+                                  selectedPhotoReference!,
+                                );
+                            Navigator.pop(dialogContext, success);
+                          },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
 
-                      child: const Text('Select'),
-                    ),
-                  ],
-                );
-              },
-            ),
-      );
-    } catch (e) {
-      AppTheme.error('Error ${e.toString()}');
+    // ===== Snackbar OUTSIDE dialog =====
+    if (ok == true) {
+      AppTheme.success('Cover photo updated');
+    } else if (ok == false) {
+      AppTheme.error('Failed to update cover photo');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final trip = widget.trip;
-    return MainScaffold(
-      currentIndex: widget.currentIndex,
-      body: Padding(
-        padding: AppTheme.defaultPadding,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
+    return Stack(
+      children: [
+        MainScaffold(
+          currentIndex: widget.currentIndex,
+          body: Stack(
             children: [
-              TripCoverHeader(
-                trip: trip,
-                canEdit: controller.state.canEdit,
-                onBack: () => Navigator.pop(context),
-                onChangeCover: _showCoverImageOptions,
-              ),
-              AppTheme.smallSpacing,
-              TripInfoHeader(
-                trip: trip,
-                canEdit: controller.state.canEdit,
-                onPickDate: _openDateRangePicker,
-                onSelectDay: _scrollToDay,
-              ),
-              AppTheme.mediumSpacing,
-              ...trip.itinerary.asMap().entries.map((entry) {
-                final dayIndex = entry.key;
-                final day = entry.value;
+              Padding(
+                padding: AppTheme.defaultPadding,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  child: Column(
+                    children: [
+                      TripCoverHeader(
+                        trip: trip,
+                        canEdit: controller.state.canEdit,
+                        onBack: () => Navigator.pop(context),
+                        onChangeCover: _showCoverImageOptions,
+                      ),
+                      AppTheme.smallSpacing,
+                      TripInfoHeader(
+                        trip: trip,
+                        canEdit: controller.state.canEdit,
+                        onPickDate: _openDateRangePicker,
+                        onSelectDay: _scrollToDay,
+                      ),
+                      AppTheme.mediumSpacing,
+                      ...trip.itinerary.asMap().entries.map((entry) {
+                        final dayIndex = entry.key;
+                        final day = entry.value;
 
-                return ItineraryDaySection(
-                  trip: trip,
-                  day: day,
-                  dayIndex: dayIndex,
-                  controller: controller,
-                  sectionKey: _dayKeys[dayIndex]!,
-                  onAddDestination: () => _showAddDestinationDialog(dayIndex),
-                );
-              }).toList(),
+                        return ItineraryDaySection(
+                          trip: trip,
+                          day: day,
+                          dayIndex: dayIndex,
+                          controller: controller,
+                          sectionKey: _dayKeys[dayIndex]!,
+                          onAddDestination:
+                              () => _showAddDestinationDialog(dayIndex),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-      ),
+        if (controller.state.isLoading)
+          Positioned.fill(child: AppTheme.loadingScreen(overlay: true)),
+      ],
     );
   }
 }

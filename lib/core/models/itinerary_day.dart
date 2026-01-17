@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:itinerme/core/models/destination.dart';
+import '../models/destination.dart';
 
 class ItineraryDay {
   final DateTime date;
