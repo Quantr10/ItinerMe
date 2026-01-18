@@ -1,54 +1,40 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-import '../state/dashboard_state.dart';
-import '../../../core/models/trip.dart';
 import '../../../core/enums/sort_enums.dart';
+import '../../../core/models/trip.dart';
+import '../../../core/services/dashboard_service.dart';
+import '../state/dashboard_state.dart';
 
 class DashboardController extends ChangeNotifier {
-  final FirebaseFirestore firestore;
-  final FirebaseAuth auth;
+  final DashboardService dashboardService;
 
   DashboardState _state = const DashboardState();
   DashboardState get state => _state;
 
-  DashboardController({required this.firestore, required this.auth}) {
+  DashboardController({required this.dashboardService}) {
     loadTrips();
   }
+
+  // ================= LOAD =================
 
   Future<void> loadTrips() async {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
 
-    final user = auth.currentUser;
-    if (user == null) {
-      _state = _state.copyWith(isLoading: false);
-      notifyListeners();
-      return;
-    }
+    final result = await dashboardService.loadTrips();
 
-    final userDoc = await firestore.collection('users').doc(user.uid).get();
-    final savedIds = Set<String>.from(userDoc['savedTripIds'] ?? []);
-    final createdIds = Set<String>.from(userDoc['createdTripIds'] ?? []);
-
-    final snap = await firestore.collection('trips').get();
-    final trips =
-        snap.docs
-            .map((d) => Trip.fromJson({...d.data(), 'id': d.id}))
-            .where((t) => !createdIds.contains(t.id))
-            .toList();
-
-    final sorted = _sort(trips, SortOption.name, SortOrder.ascending);
+    final sorted = _sort(result.trips, SortOption.name, SortOrder.ascending);
 
     _state = _state.copyWith(
-      allTrips: trips,
+      allTrips: result.trips,
       displayedTrips: sorted,
-      savedTripIds: savedIds,
+      savedTripIds: result.savedTripIds,
       isLoading: false,
     );
+
     notifyListeners();
   }
+
+  // ================= SEARCH =================
 
   void search(String query) {
     final lower = query.toLowerCase();
@@ -69,6 +55,8 @@ class DashboardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ================= SORT =================
+
   void sort(SortOption option, SortOrder order) {
     _state = _state.copyWith(
       sortOption: option,
@@ -78,25 +66,16 @@ class DashboardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ================= TOGGLE SAVE =================
+
   Future<void> toggleSaveTrip(String tripId) async {
-    final user = auth.currentUser!;
-    final ref = firestore.collection('users').doc(user.uid);
-
-    final updated = Set<String>.from(_state.savedTripIds);
-    final isSaved = updated.contains(tripId);
-
-    isSaved ? updated.remove(tripId) : updated.add(tripId);
-
-    await ref.update({
-      'savedTripIds':
-          isSaved
-              ? FieldValue.arrayRemove([tripId])
-              : FieldValue.arrayUnion([tripId]),
-    });
+    final updated = await dashboardService.toggleSaveTrip(tripId: tripId);
 
     _state = _state.copyWith(savedTripIds: updated);
     notifyListeners();
   }
+
+  // ================= LOCAL SORT =================
 
   List<Trip> _sort(List<Trip> trips, SortOption option, SortOrder order) {
     final list = List<Trip>.from(trips);

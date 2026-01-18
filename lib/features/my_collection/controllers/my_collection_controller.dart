@@ -1,18 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:itinerme/core/enums/tab_enum.dart';
-import 'package:itinerme/core/models/trip.dart';
-import 'package:itinerme/features/my_collection/state/my_collection_state.dart';
+import 'package:itinerme/core/repositories/trip_repository.dart';
+
+import '../state/my_collection_state.dart';
+import '../../../core/enums/tab_enum.dart';
+import '../../../core/models/trip.dart';
 
 class MyCollectionController extends ChangeNotifier {
-  final FirebaseFirestore firestore;
-  final FirebaseAuth auth;
+  final TripRepository tripRepository;
 
   MyCollectionState _state = const MyCollectionState();
   MyCollectionState get state => _state;
 
-  MyCollectionController({required this.firestore, required this.auth}) {
+  MyCollectionController({required this.tripRepository}) {
     loadTrips();
   }
 
@@ -20,30 +19,15 @@ class MyCollectionController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
 
-    final user = auth.currentUser;
-    if (user == null) {
-      _state = _state.copyWith(isLoading: false);
-      notifyListeners();
-      return;
-    }
-
-    final userDoc = await firestore.collection('users').doc(user.uid).get();
-    final createdIds = List<String>.from(userDoc['createdTripIds'] ?? []);
-    final savedIds = List<String>.from(userDoc['savedTripIds'] ?? []);
-
-    final snap = await firestore.collection('trips').get();
-    final trips =
-        snap.docs.map((d) => Trip.fromJson({...d.data(), 'id': d.id})).toList();
-
-    final createdTrips = trips.where((t) => createdIds.contains(t.id)).toList();
-    final savedTrips = trips.where((t) => savedIds.contains(t.id)).toList();
+    final result = await tripRepository.loadUserTrips();
 
     _state = _state.copyWith(
-      createdTrips: createdTrips,
-      savedTrips: savedTrips,
-      displayedTrips: createdTrips,
+      createdTrips: result.$1,
+      savedTrips: result.$2,
+      displayedTrips: result.$1,
       isLoading: false,
     );
+
     notifyListeners();
   }
 
@@ -86,36 +70,26 @@ class MyCollectionController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
 
-    final user = auth.currentUser!;
-    await firestore.collection('trips').doc(tripId).delete();
-    await firestore.collection('users').doc(user.uid).update({
-      'createdTripIds': FieldValue.arrayRemove([tripId]),
-    });
+    await tripRepository.deleteTrip(tripId);
 
-    final updatedCreated =
-        _state.createdTrips.where((t) => t.id != tripId).toList();
+    final updated = _state.createdTrips.where((t) => t.id != tripId).toList();
 
     _state = _state.copyWith(
-      createdTrips: updatedCreated,
-      displayedTrips: updatedCreated,
+      createdTrips: updated,
+      displayedTrips: updated,
       isLoading: false,
     );
+
     notifyListeners();
   }
 
   Future<void> unsaveTrip(String tripId) async {
-    final user = auth.currentUser!;
-    await firestore.collection('users').doc(user.uid).update({
-      'savedTripIds': FieldValue.arrayRemove([tripId]),
-    });
+    await tripRepository.unsaveTrip(tripId);
 
-    final updatedSaved =
-        _state.savedTrips.where((t) => t.id != tripId).toList();
+    final updated = _state.savedTrips.where((t) => t.id != tripId).toList();
 
-    _state = _state.copyWith(
-      savedTrips: updatedSaved,
-      displayedTrips: updatedSaved,
-    );
+    _state = _state.copyWith(savedTrips: updated, displayedTrips: updated);
+
     notifyListeners();
   }
 
@@ -123,32 +97,13 @@ class MyCollectionController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
 
-    final user = auth.currentUser!;
-    final doc = firestore.collection('trips').doc();
-
-    final newTrip = Trip(
-      id: doc.id,
-      name: customName,
-      location: original.location,
-      coverImageUrl: original.coverImageUrl,
-      budget: original.budget,
-      startDate: original.startDate,
-      endDate: original.endDate,
-      transportation: original.transportation,
-      interests: List.from(original.interests),
-      mustVisitPlaces: List.from(original.mustVisitPlaces),
-      itinerary: List.from(original.itinerary),
-    );
-
-    await doc.set(newTrip.toJson());
-    await firestore.collection('users').doc(user.uid).update({
-      'createdTripIds': FieldValue.arrayUnion([doc.id]),
-    });
+    final newTrip = await tripRepository.copyTrip(original, customName);
 
     _state = _state.copyWith(
       createdTrips: [..._state.createdTrips, newTrip],
       isLoading: false,
     );
+
     notifyListeners();
   }
 }

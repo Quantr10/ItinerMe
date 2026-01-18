@@ -1,4 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:itinerme/core/repositories/trip_repository.dart';
+import 'package:itinerme/core/services/google_place_service.dart';
+import 'package:itinerme/core/services/trip_ai_service.dart';
 import 'package:provider/provider.dart';
 import 'package:google_place/google_place.dart';
 
@@ -8,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/models/must_visit_place.dart';
 
 import '../controllers/create_trip_controller.dart';
+
 import '../widgets/date_range_picker.dart';
 import '../widgets/prediction_list.dart';
 import '../widgets/tag_chips.dart';
@@ -20,7 +26,15 @@ class CreateTripScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CreateTripController(),
+      create:
+          (_) => CreateTripController(
+            googlePlaceService: GooglePlaceService(),
+            tripAIService: TripAIService(),
+            tripRepository: TripRepository(
+              firestore: FirebaseFirestore.instance,
+              auth: FirebaseAuth.instance,
+            ),
+          ),
       child: const _CreateTripView(),
     );
   }

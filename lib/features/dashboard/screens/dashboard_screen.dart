@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:itinerme/core/services/dashboard_service.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/widgets/main_scaffold.dart';
@@ -22,9 +23,12 @@ class DashboardScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create:
           (_) => DashboardController(
-            firestore: FirebaseFirestore.instance,
-            auth: FirebaseAuth.instance,
+            dashboardService: DashboardService(
+              firestore: FirebaseFirestore.instance,
+              auth: FirebaseAuth.instance,
+            ),
           ),
+
       child: const _DashboardViewState(),
     );
   }

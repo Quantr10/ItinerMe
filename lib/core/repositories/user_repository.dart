@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../core/models/user.dart';
+import '../models/user.dart';
 
-class UserService {
+class UserRepository {
   final CollectionReference _usersRef = FirebaseFirestore.instance.collection(
     'users',
   );
@@ -27,5 +27,12 @@ class UserService {
       return UserModel.fromJson(doc.data()! as Map<String, dynamic>, doc.id);
     }
     return null;
+  }
+
+  Future<void> updateAvatar(String userId, String newUrl) async {
+    await _usersRef.doc(userId).update({
+      'avatarUrl': newUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

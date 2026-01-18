@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'login_screen.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
-import '../../user/providers/user_provider.dart';
+import '../controllers/user_controller.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -26,7 +26,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         if (user != null && user != previousUser) {
           previousUser = user;
-          Future.microtask(() => context.read<UserProvider>().fetchUser());
+          Future.microtask(() => context.read<UserController>().fetchUser());
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {

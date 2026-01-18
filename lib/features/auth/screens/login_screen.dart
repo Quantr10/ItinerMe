@@ -1,10 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:itinerme/core/services/auth_service.dart';
+import 'package:itinerme/core/repositories/user_repository.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 
-import '../../user/providers/user_provider.dart';
+import '../controllers/user_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../widgets/auth_email_field.dart';
 import '../widgets/auth_google_button.dart';
@@ -17,7 +20,13 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AuthController(),
+      create:
+          (_) => AuthController(
+            authService: AuthService(
+              auth: FirebaseAuth.instance,
+              userRepository: UserRepository(),
+            ),
+          ),
       child: const _LoginView(),
     );
   }
@@ -30,7 +39,7 @@ class _LoginView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<AuthController>();
     final state = controller.state;
-    final userProvider = context.read<UserProvider>();
+    final userController = context.read<UserController>();
 
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
@@ -66,7 +75,7 @@ class _LoginView extends StatelessWidget {
                     await controller.loginEmail(
                       email: emailController.text,
                       password: passwordController.text,
-                      userProvider: userProvider,
+                      userController: userController,
                     );
                     if (!context.mounted) return;
                     Navigator.pushReplacementNamed(
@@ -84,7 +93,7 @@ class _LoginView extends StatelessWidget {
                 onPressed: () async {
                   try {
                     await controller.loginWithGoogle(
-                      userProvider: userProvider,
+                      userController: userController,
                     );
                     if (!context.mounted) return;
                     Navigator.pushReplacementNamed(

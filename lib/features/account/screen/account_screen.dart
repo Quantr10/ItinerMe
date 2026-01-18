@@ -1,14 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:itinerme/core/services/account_service.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/main_scaffold.dart';
 import '../../../core/routes/app_routes.dart';
 
-import '../../user/providers/user_provider.dart';
+import '../../auth/controllers/user_controller.dart';
+
 import '../controller/account_controller.dart';
+
 import '../widgets/account_info_card.dart';
 import '../widgets/avatar_section.dart';
 
@@ -20,8 +24,11 @@ class AccountScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create:
           (_) => AccountController(
-            firestore: FirebaseFirestore.instance,
-            storage: FirebaseStorage.instance,
+            accountService: AccountService(
+              firestore: FirebaseFirestore.instance,
+              storage: FirebaseStorage.instance,
+              auth: FirebaseAuth.instance,
+            ),
           ),
       child: const _AccountView(),
     );
@@ -35,8 +42,8 @@ class _AccountView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<AccountController>();
     final state = controller.state;
-    final userProvider = context.watch<UserProvider>();
-    final user = userProvider.user;
+    final userController = context.watch<UserController>();
+    final user = userController.user;
 
     return Stack(
       children: [
@@ -59,7 +66,7 @@ class _AccountView extends StatelessWidget {
                     try {
                       await controller.pickAndUploadAvatar(user.id);
                       if (controller.state.avatarUrl != null) {
-                        userProvider.updateUserAvatar(
+                        userController.updateUserAvatar(
                           controller.state.avatarUrl!,
                         );
                       }
@@ -80,7 +87,7 @@ class _AccountView extends StatelessWidget {
                   isPrimary: false,
                   onPressed: () async {
                     await controller.logout();
-                    userProvider.clearUser();
+                    userController.clearUser();
 
                     AppTheme.success('Logged out successfully');
 

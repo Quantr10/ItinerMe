@@ -1,15 +1,22 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:itinerme/core/repositories/trip_repository.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/widgets/main_scaffold.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/trip.dart';
+import '../../../core/services/google_place_service.dart';
+import '../../../core/services/travel_service.dart';
+import '../../../core/services/trip_ai_service.dart';
+import '../../../core/services/trip_media_service.dart';
 
 import '../controller/trip_detail_controller.dart';
+
 import '../widgets/trip_cover_header.dart';
 import '../widgets/trip_info_header.dart';
 import '../widgets/itinerary_day_section.dart';
-
 import '../widgets/data_range_dialog.dart';
 import '../widgets/add_destination_dialog.dart';
 import '../widgets/cover_option_dialog.dart';
@@ -27,7 +34,18 @@ class TripDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TripDetailController(trip),
+      create:
+          (_) => TripDetailController(
+            trip: trip,
+            tripRepo: TripRepository(
+              firestore: FirebaseFirestore.instance,
+              auth: FirebaseAuth.instance,
+            ),
+            aiService: TripAIService(),
+            placeService: GooglePlaceService(),
+            travelService: TravelService(),
+            coverService: TripMediaService(),
+          ),
       child: _TripDetailView(currentIndex: currentIndex),
     );
   }

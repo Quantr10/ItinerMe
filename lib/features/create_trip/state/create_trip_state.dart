@@ -1,4 +1,5 @@
 import 'package:google_place/google_place.dart';
+
 import '../../../core/enums/transportation_enums.dart';
 import '../../../core/enums/interest_tag_enums.dart';
 import '../../../core/models/must_visit_place.dart';

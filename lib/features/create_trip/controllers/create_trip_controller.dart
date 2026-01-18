@@ -1,29 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_place/google_place.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/enums/transportation_enums.dart';
 import '../../../core/enums/interest_tag_enums.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/models/trip.dart';
 import '../../../core/models/must_visit_place.dart';
-import '../../../core/models/destination.dart';
-import '../../../core/models/itinerary_day.dart';
-import '../../../core/services/place_image_cache_service.dart';
+
+import '../../../core/services/google_place_service.dart';
+import '../../../core/services/trip_ai_service.dart';
+import '../../../core/repositories/trip_repository.dart';
+
 import '../state/create_trip_state.dart';
 
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
 class CreateTripController extends ChangeNotifier {
+  final GooglePlaceService googlePlaceService;
+  final TripAIService tripAIService;
+  final TripRepository tripRepository;
+
+  CreateTripController({
+    required this.googlePlaceService,
+    required this.tripAIService,
+    required this.tripRepository,
+  });
+
   CreateTripState _state = const CreateTripState();
   CreateTripState get state => _state;
-
-  static final GooglePlace googlePlace = GooglePlace(
-    dotenv.env['GOOGLE_MAPS_API_KEY']!,
-  );
 
   // ---------------- DESTINATION ----------------
 
@@ -34,12 +35,12 @@ class CreateTripController extends ChangeNotifier {
       return;
     }
 
-    final result = await googlePlace.autocomplete.get(
+    final predictions = await googlePlaceService.autocomplete(
       value,
-      types: '(regions)',
+      LatLon(0, 0),
     );
 
-    _state = _state.copyWith(destinationPredictions: result?.predictions ?? []);
+    _state = _state.copyWith(destinationPredictions: predictions);
     notifyListeners();
   }
 
@@ -47,8 +48,7 @@ class CreateTripController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
 
-    final details = await googlePlace.details.get(prediction.placeId ?? '');
-    final result = details?.result;
+    final result = await googlePlaceService.getDetails(prediction.placeId!);
     if (result == null) {
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
@@ -70,6 +70,7 @@ class CreateTripController extends ChangeNotifier {
               : null,
       isLoading: false,
     );
+
     notifyListeners();
   }
 
@@ -82,14 +83,12 @@ class CreateTripController extends ChangeNotifier {
       return;
     }
 
-    final result = await googlePlace.autocomplete.get(
+    final predictions = await googlePlaceService.autocomplete(
       value,
-      location: _state.selectedDestinationCoordinates!,
-      radius: 100000,
-      strictbounds: true,
+      _state.selectedDestinationCoordinates!,
     );
 
-    _state = _state.copyWith(mustVisitPredictions: result?.predictions ?? []);
+    _state = _state.copyWith(mustVisitPredictions: predictions);
     notifyListeners();
   }
 
@@ -97,8 +96,8 @@ class CreateTripController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
 
-    final details = await googlePlace.details.get(prediction.placeId ?? '');
-    final name = details?.result?.name;
+    final result = await googlePlaceService.getDetails(prediction.placeId!);
+    final name = result?.name;
     if (name == null) return;
 
     final updated = List<MustVisitPlace>.from(_state.mustVisitPlaces)
@@ -109,6 +108,7 @@ class CreateTripController extends ChangeNotifier {
       mustVisitPredictions: [],
       isLoading: false,
     );
+
     notifyListeners();
   }
 
@@ -123,7 +123,6 @@ class CreateTripController extends ChangeNotifier {
 
   void searchInterests(String value, List<InterestTag> availableTags) {
     final lower = value.toLowerCase();
-
     final predictions =
         value.isEmpty
             ? <InterestTag>[]
@@ -173,53 +172,26 @@ class CreateTripController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("User not logged in");
-
-      final tripRef = FirebaseFirestore.instance.collection('trips').doc();
-
-      String coverUrl =
-          'https://images.unsplash.com/photo-1542038784456-1ea8e935640e';
-
-      if (_state.coverPhotoReference != null) {
-        final cached = await PlaceImageCacheService.cachePlacePhoto(
-          photoReference: _state.coverPhotoReference!,
-          path: 'trip_covers/${tripRef.id}.jpg',
-        );
-        if (cached != null) coverUrl = cached;
-      }
-
-      final trip = Trip(
-        id: tripRef.id,
-        name: tripName,
-        location: _state.selectedDestinationName!,
-        coverImageUrl: coverUrl,
+      // 1. Create Firestore trip
+      final trip = await tripRepository.createTrip(
+        tripName: tripName,
         budget: budget,
+        locationName: _state.selectedDestinationName!,
         startDate: _state.startDate!,
         endDate: _state.endDate!,
         transportation: _state.transportation!,
         interests: _state.interests.map((e) => e.label).toList(),
         mustVisitPlaces: _state.mustVisitPlaces,
-        itinerary: [],
+        coverPhotoReference: _state.coverPhotoReference,
       );
 
-      await tripRef.set(trip.toJson());
+      // 2. Generate AI itinerary
+      final itinerary = await tripAIService.generateItinerary(trip);
 
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
-        {
-          'createdTripIds': FieldValue.arrayUnion([tripRef.id]),
-        },
-      );
-
-      final itinerary = await generateItinerary(trip);
-
-      await tripRef.update({
-        'itinerary': itinerary.map((e) => e.toJson()).toList(),
-      });
+      // 3. Attach itinerary to trip
+      await tripRepository.attachItinerary(trip.id, itinerary);
 
       _state = const CreateTripState(submitSuccess: true);
-      notifyListeners();
-
       AppTheme.success('Trip created successfully!');
     } catch (e) {
       AppTheme.error('Failed to create trip');
@@ -234,167 +206,156 @@ class CreateTripController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --
-  static Future<List<ItineraryDay>> generateItinerary(Trip trip) async {
-    final prompt = buildPromptFromTrip(trip);
+  // static Future<List<ItineraryDay>> generateItinerary(Trip trip) async {
+  //   final prompt = buildPromptFromTrip(trip);
 
-    final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+  //   final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        "model": "gpt-4",
-        "temperature": 0.8,
-        "messages": [
-          {"role": "user", "content": prompt},
-        ],
-      }),
-    );
+  //   final response = await http.post(
+  //     url,
+  //     headers: {
+  //       'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']}',
+  //       'Content-Type': 'application/json',
+  //     },
+  //     body: jsonEncode({
+  //       "model": "gpt-4",
+  //       "temperature": 0.8,
+  //       "messages": [
+  //         {"role": "user", "content": prompt},
+  //       ],
+  //     }),
+  //   );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to generate ${response.body}');
-    }
+  //   if (response.statusCode != 200) {
+  //     throw Exception('Failed to generate ${response.body}');
+  //   }
 
-    final rawContent = utf8.decode(response.bodyBytes);
-    final content =
-        jsonDecode(rawContent)['choices'][0]['message']['content']
-            .replaceAll('```json', '')
-            .replaceAll('```', '')
-            .trim();
+  //   final rawContent = utf8.decode(response.bodyBytes);
+  //   final content =
+  //       jsonDecode(rawContent)['choices'][0]['message']['content']
+  //           .replaceAll('```json', '')
+  //           .replaceAll('```', '')
+  //           .trim();
 
-    final List<dynamic> jsonList = jsonDecode(content);
-    final List<ItineraryDay> enrichedDays = [];
+  //   final List<dynamic> jsonList = jsonDecode(content);
+  //   final List<ItineraryDay> enrichedDays = [];
 
-    final Location? tripLocation = await getTripLocationCoordinates(
-      trip.location,
-    );
-    if (tripLocation == null)
-      throw Exception('Cannot resolve ${trip.location} location');
+  //   final Location? tripLocation = await getTripLocationCoordinates(
+  //     trip.location,
+  //   );
+  //   if (tripLocation == null)
+  //     throw Exception('Cannot resolve ${trip.location} location');
 
-    for (final day in jsonList) {
-      final destinations = <Destination>[];
+  //   for (final day in jsonList) {
+  //     final destinations = <Destination>[];
 
-      for (final d in day['destinations']) {
-        final query = "${d['name']}, ${trip.location}";
-        SearchResult? matchedPlace;
+  //     for (final d in day['destinations']) {
+  //       final query = "${d['name']}, ${trip.location}";
+  //       SearchResult? matchedPlace;
 
-        final textSearch = await googlePlace.search.getTextSearch(
-          query,
-          location: tripLocation,
-          radius: 50000,
-        );
+  //       final textSearch = await googlePlace.search.getTextSearch(
+  //         query,
+  //         location: tripLocation,
+  //         radius: 50000,
+  //       );
 
-        if (textSearch?.results != null && textSearch!.results!.isNotEmpty) {
-          matchedPlace = textSearch.results!.firstWhere(
-            (p) =>
-                p.name != null &&
-                (p.name!.toLowerCase().contains(
-                      d['name'].toString().toLowerCase(),
-                    ) ||
-                    d['name'].toString().toLowerCase().contains(
-                      p.name!.toLowerCase(),
-                    )),
-            orElse: () => textSearch.results!.first,
-          );
-        }
+  //       if (textSearch?.results != null && textSearch!.results!.isNotEmpty) {
+  //         matchedPlace = textSearch.results!.firstWhere(
+  //           (p) =>
+  //               p.name != null &&
+  //               (p.name!.toLowerCase().contains(
+  //                     d['name'].toString().toLowerCase(),
+  //                   ) ||
+  //                   d['name'].toString().toLowerCase().contains(
+  //                     p.name!.toLowerCase(),
+  //                   )),
+  //           orElse: () => textSearch.results!.first,
+  //         );
+  //       }
 
-        DetailsResult? placeDetails;
-        if (matchedPlace?.placeId != null) {
-          final detailResponse = await googlePlace.details.get(
-            matchedPlace!.placeId!,
-          );
-          placeDetails = detailResponse?.result;
-        }
+  //       DetailsResult? placeDetails;
+  //       if (matchedPlace?.placeId != null) {
+  //         final detailResponse = await googlePlace.details.get(
+  //           matchedPlace!.placeId!,
+  //         );
+  //         placeDetails = detailResponse?.result;
+  //       }
 
-        String? imageUrl;
+  //       String? imageUrl;
 
-        if (placeDetails?.photos?.isNotEmpty == true) {
-          imageUrl = await PlaceImageCacheService.cachePlacePhoto(
-            photoReference: placeDetails!.photos!.first.photoReference!,
-            path: 'destinations/${trip.id}/${matchedPlace!.placeId}.jpg',
-          );
-        }
+  //       if (placeDetails?.photos?.isNotEmpty == true) {
+  //         imageUrl = await PlaceImageCacheService.cachePlacePhoto(
+  //           photoReference: placeDetails!.photos!.first.photoReference!,
+  //           path: 'destinations/${trip.id}/${matchedPlace!.placeId}.jpg',
+  //         );
+  //       }
 
-        destinations.add(
-          Destination(
-            placeId: matchedPlace?.placeId ?? '',
-            name: d['name'],
-            address: placeDetails?.formattedAddress ?? '',
-            description: d['description'],
-            durationMinutes: d['durationMinutes'],
-            latitude: placeDetails?.geometry?.location?.lat ?? 0.0,
-            longitude: placeDetails?.geometry?.location?.lng ?? 0.0,
-            imageUrl: imageUrl,
-            types: placeDetails?.types,
-            website: placeDetails?.website,
-            openingHours: placeDetails?.openingHours?.weekdayText,
-            rating: placeDetails?.rating,
-            userRatingsTotal: placeDetails?.userRatingsTotal,
-            url: placeDetails?.url,
-          ),
-        );
-      }
+  //       destinations.add(
+  //         Destination(
+  //           placeId: matchedPlace?.placeId ?? '',
+  //           name: d['name'],
+  //           address: placeDetails?.formattedAddress ?? '',
+  //           description: d['description'],
+  //           durationMinutes: d['durationMinutes'],
+  //           latitude: placeDetails?.geometry?.location?.lat ?? 0.0,
+  //           longitude: placeDetails?.geometry?.location?.lng ?? 0.0,
+  //           imageUrl: imageUrl,
+  //           types: placeDetails?.types,
+  //           website: placeDetails?.website,
+  //           openingHours: placeDetails?.openingHours?.weekdayText,
+  //           rating: placeDetails?.rating,
+  //           userRatingsTotal: placeDetails?.userRatingsTotal,
+  //           url: placeDetails?.url,
+  //         ),
+  //       );
+  //     }
 
-      enrichedDays.add(
-        ItineraryDay(
-          date: DateTime.parse(day['date']),
-          destinations: destinations,
-        ),
-      );
-    }
+  //     enrichedDays.add(
+  //       ItineraryDay(
+  //         date: DateTime.parse(day['date']),
+  //         destinations: destinations,
+  //       ),
+  //     );
+  //   }
 
-    return enrichedDays;
-  }
+  //   return enrichedDays;
+  // }
 
-  static Future<Location?> getTripLocationCoordinates(
-    String locationName,
-  ) async {
-    final result = await googlePlace.search.getTextSearch(locationName);
-    if (result?.results != null && result!.results!.isNotEmpty) {
-      return result.results!.first.geometry?.location;
-    }
-    return null;
-  }
+  // static String buildPromptFromTrip(Trip trip) {
+  //   return '''
+  // You are a professional travel planner.
 
-  static String buildPromptFromTrip(Trip trip) {
-    return '''
-  You are a professional travel planner.
+  // Below is the trip information provided by a user. Your task is to generate a precise list of tourist attractions.
 
-  Below is the trip information provided by a user. Your task is to generate a precise list of tourist attractions.
+  // Destination: ${trip.location}
+  // Start: ${trip.startDate.toIso8601String()}
+  // End: ${trip.endDate.toIso8601String()}
+  // Budget: ${trip.budget} USD
+  // Transportation: ${trip.transportation.label}
+  // Must-Visit Places: ${trip.mustVisitPlaces.map((p) => p.name).join(', ')}
+  // Interests: ${trip.interests.join(', ')}
 
-  Destination: ${trip.location}
-  Start: ${trip.startDate.toIso8601String()}
-  End: ${trip.endDate.toIso8601String()}
-  Budget: ${trip.budget} USD
-  Transportation: ${trip.transportation.label}
-  Must-Visit Places: ${trip.mustVisitPlaces.map((p) => p.name).join(', ')}
-  Interests: ${trip.interests.join(', ')}
+  // The list starts on ${trip.startDate.toIso8601String()} and ends on ${trip.endDate.toIso8601String()}.
+  // Each day should have 3-5 destinations and **fully utilized** with realistic visit durations.
+  // Prioritize must-visit places but **reorder them for optimal routing**.
+  // Use **precise place names**, avoiding nicknames or abbreviations.
+  // Add several places, relevant to: ${trip.interests.join(', ')}, and consider major attractions.
+  // Make each day's destinations **geographically logical**. Cluster nearby locations together and do not split adjacent spots into different days.
 
-  The list starts on ${trip.startDate.toIso8601String()} and ends on ${trip.endDate.toIso8601String()}.
-  Each day should have 3-5 destinations and **fully utilized** with realistic visit durations.
-  Prioritize must-visit places but **reorder them for optimal routing**.
-  Use **precise place names**, avoiding nicknames or abbreviations.
-  Add several places, relevant to: ${trip.interests.join(', ')}, and consider major attractions.
-  Make each day's destinations **geographically logical**. Cluster nearby locations together and do not split adjacent spots into different days.
+  // Return a valid JSON array only, no explanation or markdown:
+  // [
+  //   {
+  //     "date": "YYYY-MM-DD",
+  //     "destinations": [
+  //       {
+  //         "name": "Place Name",
+  //         "description": "Detail description",
+  //         "durationMinutes": 90,
+  //       }
+  //     ]
+  //   }
+  // ]
 
-  Return a valid JSON array only, no explanation or markdown:
-  [
-    {
-      "date": "YYYY-MM-DD",
-      "destinations": [
-        {
-          "name": "Place Name",
-          "description": "Detail description",
-          "durationMinutes": 90,
-        }
-      ]
-    }
-  ]
-
-  ''';
-  }
+  // ''';
+  // }
 }

@@ -2,14 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:itinerme/core/enums/tab_enum.dart';
-import 'package:itinerme/core/theme/app_theme.dart';
-import 'package:itinerme/core/widgets/main_scaffold.dart';
-import 'package:itinerme/features/my_collection/controllers/my_collection_controller.dart';
-import 'package:itinerme/features/my_collection/widgets/my_collection_search_bar.dart';
-import 'package:itinerme/features/my_collection/widgets/my_collection_tab_button.dart';
-import 'package:itinerme/features/my_collection/widgets/my_collection_trip_list.dart';
+import 'package:itinerme/core/repositories/trip_repository.dart';
 import 'package:provider/provider.dart';
+
+import '../../../core/enums/tab_enum.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/main_scaffold.dart';
+
+import '../controllers/my_collection_controller.dart';
+
+import '../widgets/my_collection_search_bar.dart';
+import '../widgets/my_collection_tab_button.dart';
+import '../widgets/my_collection_trip_list.dart';
 
 class MyCollectionScreen extends StatelessWidget {
   const MyCollectionScreen({super.key});
@@ -19,8 +23,10 @@ class MyCollectionScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create:
           (_) => MyCollectionController(
-            firestore: FirebaseFirestore.instance,
-            auth: FirebaseAuth.instance,
+            tripRepository: TripRepository(
+              firestore: FirebaseFirestore.instance,
+              auth: FirebaseAuth.instance,
+            ),
           ),
       child: const _MyCollectionView(),
     );

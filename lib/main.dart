@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:itinerme/core/repositories/user_repository.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-import 'features/user/providers/user_provider.dart';
+import 'features/auth/controllers/user_controller.dart';
 import 'features/auth/screens/auth_wrapper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -22,7 +23,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => UserController(userRepository: UserRepository()),
+        ),
+      ],
       child: MaterialApp(
         title: 'ItinerMe',
         debugShowCheckedModeBanner: false,
